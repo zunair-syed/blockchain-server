@@ -43,6 +43,10 @@ setInterval(function(){
   })
 }, CONFIG.ALLOWANCE_SCHED)
 
+
+
+
+
 var sendErrorMsg = function(str, res){
   console.log(str)
   res.status(400)
@@ -78,7 +82,7 @@ var filterByCurrentUser = function(data, username){
       return d >= date
     })
   }
-
+}
 module.exports.setup = function(sdk, cc){
   ibc = sdk
   chaincode = cc
@@ -87,6 +91,9 @@ module.exports.setup = function(sdk, cc){
 module.exports.isSetup = function(){
   return ibc && chaincode
 }
+
+
+
 
 // response: JSON
 router.get('/ui/tip-reasons', function(req, res){
@@ -284,7 +291,6 @@ router.post('/trade', function(req, res){
               sendErrorMsg("Improper Slack Token", res)
           }else{
             console.log('Successfully got slack token' +  rows[0])
-
             if(!rows[0]) {sendErrorMsg("Something went wrong. No rows were extracted", res)}
             else if(!(rows[0].token)) {sendErrorMsg("Something went wrong. No token field in row", res)}
             else if(rows[0].token != req.get("token")){sendErrorMsg("Incorrect Slack Token Passed in", res)}
