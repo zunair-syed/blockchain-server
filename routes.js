@@ -208,21 +208,8 @@ router.get('/product-history', function(req, res){
   })
 })
 
-// headers: token
-// body: senderId, receiverId, amount, reason
-// response: JSON
-router.post('/trade', function(req, res){
-  var senderId = req.body.senderId
-  var receiverId = req.body.receiverId
-  var amount = req.body.amount
-  var reason = req.body.reason
 
-  if(!senderId || !receiverId || !amount || !reason){
-    sendErrorMsg("Missing data", res)
-    return
-  }
-
-  UsersManager.checkUserTokenPair(senderId, req.get("token"), res, sendErrorMsg, function(){
+var trade_points = function(senderId,receiverId,reason, amount, res){
     chaincode.query.read([senderId], function(e, data){
       if(e){
         sendErrorMsg("Blockchain Error " + e, res)
@@ -267,7 +254,51 @@ router.post('/trade', function(req, res){
       })
 
     })
-  })
+}
+
+
+
+
+
+// headers: token
+// body: senderId, receiverId, amount, reason
+// response: JSON
+router.post('/trade', function(req, res){
+  var senderId = req.body.senderId
+  var receiverId = req.body.receiverId
+  var amount = req.body.amount
+  var reason = req.body.reason
+
+  var client = null;
+  if(req.body.client) {client = req.body.client}
+
+  if(!senderId || !receiverId || !amount || !reason){
+    sendErrorMsg("Missing data", res)
+    return
+  }
+
+  if(client == 'SLACK'){
+      dbUtil.getSlackToken(username, function(err, rows){
+          if (err){
+              console.log('DB Error getting user', err)
+              sendErrorMsg("Improper Slack Token", res)
+          }else{
+            console.log('Successfully got slack token' +  rows[0])
+
+            if(!rows[0]) {sendErrorMsg("Something went wrong. No rows were extracted", res)}
+            else if(!(rows[0].token)) {sendErrorMsg("Something went wrong. No token field in row", res)}
+            else if(rows[0].token != req.get("token")){sendErrorMsg("Incorrect Slack Token Passed in", res)}
+            else{
+                trade_points(senderId, receiverId, reason, amount, res);
+            }
+          }
+      })
+  }else{
+      UsersManager.checkUserTokenPair(senderId, req.get("token"), res, sendErrorMsg, function(){
+          trade_points(senderId, receiverId, reason, amount, res);
+      })
+  }
+
 })
 
 // body: username, password, fullname, image_64 (optional)
@@ -324,29 +355,10 @@ router.post('/createAccount', function(req, res){
 router.post('/login', function(req, res){
   var username = req.body.username
   var password = req.body.password
-  var client = req.body.client
+  var client = null;
 
-  if (client = 'SLACK') {
-    if(!username){
-      sendErrorMsg("Missing data", res)
-      return
-    }
-    chaincode.query.read([username], function(e, data){
-      if(e){
-        console.log(e)
-        sendErrorMsg("Blockchain error", res)
-        return
-      }
-      if(!data){
-        sendErrorMsg("Error - Data not found for some reason?", res)
-        return
-      }
-      dbUtil.getUser(username, res, function(rows) {
-        res.status(200)
-        res.send({token: token, fullname: rows[0].fullname, image_64: rows[0].image_64})})
-      }
-    })
-  } else {
+  if(req.body.client) {client = req.body.client}
+
     if(!username || !password){
       sendErrorMsg("Missing data", res)
       return
@@ -366,18 +378,24 @@ router.post('/login', function(req, res){
       var hash = JSON.parse(data).password
 
       if(UsersManager.comparePasswords(password, hash)){
-        var token = UsersManager.createToken(username)
+        var token = null;
 
-        dbUtil.getUser(username, res, function(rows){
-          res.status(200)
-          res.send({token: token, fullname: rows[0].fullname, image_64: rows[0].image_64})
-        })
+        if(client == 'SLACK'){
+            token = UsersManager.createSlackToken(username)
+            dbUtil.addSlackUser(username, token, res);
+        }
+        else{
+            token = UsersManager.createToken(username)
+            dbUtil.getUser(username, res, function(rows){
+              res.status(200)
+              res.send({token: token, fullname: rows[0].fullname, image_64: rows[0].image_64})
+            })
+        }
       }
       else{
         sendErrorMsg("Wrong password", res)
       }
     })
-  }
 })
 
 // headers: token

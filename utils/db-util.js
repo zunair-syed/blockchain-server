@@ -128,3 +128,40 @@ module.exports.getAllUsers = function(fullname, res, onSuccess){
     onSuccess(rows)
   })
 }
+
+
+module.exports.addSlackUser = function(username, token, res){
+  var query = 'INSERT INTO slack_users (username, token) VALUES ("' +
+            username + '" , "' + token + '")'
+
+  connection.query(query, function(err, insertTempRows){
+    if (err){
+        console.log('DB Error inserting user ', err)
+        res.status(400)
+        res.send({msg: "DB error, inserting"})
+        return
+    }else{
+        console.log('Successfully inserted user ', err)
+        res.status(200)
+        res.send({token: token,username: username })
+        return
+    }
+
+  })
+}
+
+
+module.exports.getSlackToken = function(username, cb){
+    var query = 'SELECT * FROM slack_users WHERE username = "' + username + '"'
+
+    connection.query(query, function(err, rows){
+        if (err){
+            console.log('DB Error getting user', err)
+            cb(err)
+        }else{
+            console.log('Successfully got slack token' +  rows[0].token)
+            cb(rows)
+        }
+
+    })
+}

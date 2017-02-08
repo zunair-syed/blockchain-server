@@ -52,6 +52,27 @@ module.exports.checkUserTokenPair = function(username, t, res, err, callback){
   }
 }
 
+// checks for valid username & token too
+module.exports.checkSlackTokenPair = function(username, t, res, err, callback){
+  if(!t){
+    err("Token param not found", res)
+  }
+  else if(!username){
+    err("Username param not found", res)
+  }
+  else if(loggedInUsers[username] != t && oldTokens[t] != username){
+    err("Invalid username token pair", res)
+  }
+  else if(loggedInUsers[username] != t && oldTokens[t] === username){
+    err("Old token detected, login again", res)
+  }
+  else{
+    callback()
+  }
+}
+
+
+
 // creates user and return token
 module.exports.createToken = function(username){
   // logged into new device, delete old token, make new one
@@ -65,6 +86,13 @@ module.exports.createToken = function(username){
 
   return token
 }
+
+/* SLACK TOKEN only works for trade atm */
+module.exports.createSlackToken = function(username){
+  var token = UUID.randomUUID()
+  return token
+}
+
 
 module.exports.logout = function(username, token, res, err, callback){
   if(username in loggedInUsers){
