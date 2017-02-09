@@ -1,0 +1,6 @@
+applications:
+- path: .
+  memory: 256M
+  instances: 1
+  name: blockchain-zunair-server-dev
+  host: blockchain-zunair-server-dev
